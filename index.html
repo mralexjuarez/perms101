@@ -1,0 +1,435 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Linux Permissions and FACLs</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/night.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/mono-blue.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h2>Linux Permissions</h2>
+					<hr/>
+					<h3>Filesystem Permissions and FACLs</h3>
+				</section>
+				<section>
+				<h2>Agenda</h2>
+				<ul>
+					<li>FS Permission Basics</li>
+					<li>Using chmod, chown</li>
+					<li>umask &amp; /etc/skel</li>
+					<li>FACLs Introduction</li>
+					<li>C.R.U.D on FACLs</li>
+					<li>Review and Expand</li>
+				</ul>
+				</section>
+
+				<section>
+				<h2>FS Permission Basics</h2>
+				</section>
+
+				<section data-transition="slide none">
+				<h2>FS Permission Basics</h2>
+				<p>Let's start breaking down the output</p>
+				<pre><code style="shell"  data-trim data-noescape>ls -lah
+total 20K
+drwxrwxrwx. 3 root root 4.0K Mar  4 20:04 .
+dr-xr-x---. 5 root root 4.0K Mar  4 19:39 ..
+-rwxr-xr--+ 1 root root    0 Mar  4 19:39 file1
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file10
+-rwxrwxr--+ 1 root root    0 Mar  4 19:39 file2
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file8
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file9
+drwxrwxrwx. 2 root root 4.0K Mar  4 20:04 testdir</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>FS Permission Basics</h2>
+				<p>Let's start breaking down the output</p>
+				<pre><code style="shell"  data-trim data-noescape>ls -lah
+total 20K
+<mark>d</mark>rwxrwxrwx. 3 root root 4.0K Mar  4 20:04 .
+dr-xr-x---. 5 root root 4.0K Mar  4 19:39 ..
+<mark>-</mark>rwxr-xr--+ 1 root root    0 Mar  4 19:39 file1
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file10
+-rwxrwxr--+ 1 root root    0 Mar  4 19:39 file2
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file8
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file9
+drwxrwxrwx. 2 root root 4.0K Mar  4 20:04 testdir</code></pre>
+				</section>
+
+
+				<section data-transition="none">
+				<h2>FS Permission Basics</h2>
+				<p>Let's start breaking down the output</p>
+				<pre><code style="shell"  data-trim data-noescape>ls -lah
+total 20K
+d<mark>rwx</mark>rwxrwx. 3 root root 4.0K Mar  4 20:04 .
+dr-xr-x---. 5 root root 4.0K Mar  4 19:39 ..
+-rwxr-xr--+ 1 root root    0 Mar  4 19:39 file1
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file10
+-rwxrwxr--+ 1 root root    0 Mar  4 19:39 file2
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file8
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file9
+drwxrwxrwx. 2 root root 4.0K Mar  4 20:04 testdir</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>FS Permission Basics</h2>
+				<p>Let's start breaking down the output</p>
+				<pre><code style="shell"  data-trim data-noescape>ls -lah
+total 20K
+drwx<mark>rwx</mark>rwx. 3 root root 4.0K Mar  4 20:04 .
+dr-xr-x---. 5 root root 4.0K Mar  4 19:39 ..
+-rwxr-xr--+ 1 root root    0 Mar  4 19:39 file1
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file10
+-rwxrwxr--+ 1 root root    0 Mar  4 19:39 file2
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file8
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file9
+drwxrwxrwx. 2 root root 4.0K Mar  4 20:04 testdir</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>FS Permission Basics</h2>
+				<p>Let's start breaking down the output</p>
+				<pre><code style="shell"  data-trim data-noescape>ls -lah
+total 20K
+drwxrwx<mark>rwx</mark>. 3 root root 4.0K Mar  4 20:04 .
+dr-xr-x---. 5 root root 4.0K Mar  4 19:39 ..
+-rwxr-xr--+ 1 root root    0 Mar  4 19:39 file1
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file10
+-rwxrwxr--+ 1 root root    0 Mar  4 19:39 file2
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file8
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file9
+drwxrwxrwx. 2 root root 4.0K Mar  4 20:04 testdir</code></pre>
+				</section>
+
+
+				<section data-transition="none">
+				<h2>FS Permission Basics</h2>
+				<p>Let's start breaking down the output</p>
+				<pre><code style="shell" data-trim data-noescape>ls -lah
+total 20K
+drwxrwxrwx<mark>.</mark> 3 root root 4.0K Mar  4 20:04 .
+dr-xr-x---. 5 root root 4.0K Mar  4 19:39 ..
+-rwxr-xr--<mark>+</mark> 1 root root    0 Mar  4 19:39 file1
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file10
+-rwxrwxr--+ 1 root root    0 Mar  4 19:39 file2
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file8
+-rw-rw-rw-. 1 root root    0 Mar  4 19:39 file9
+drwxrwxrwx. 2 root root 4.0K Mar  4 20:04 testdir</code></pre>
+				</section>
+
+
+				<section>
+				<h2>FS Permission Basics</h2>
+				<table>
+					<tr>
+						<td>d / - / l</td><td>The first field notates the file type.</td>
+					</tr>
+					<tr>
+						<td>RWX</td><td>The next three sets of three represent Read(4), Write(2), Execute(1) for the Owner, Group and Other</td>
+					</tr>
+					<tr>
+						<td>./+/&lt;space&gt;</td><td>Lets the user know if there are other access methods such as FACLs or SELinux Context</td>
+					</tr>
+				</table>
+				</section>
+				<section>
+				<h2>Using <em>chown</em> and <em>chmod</em></h2>
+				</section>
+
+				<section data-transition="slide none">
+				<h2>Change Ownership</h2>
+				<p>The <em>chown</em> command will change the owner or group ownership of a file.</p>
+				<pre><code data-trim data-noescape class="shell">chown root:root file
+chown root: file
+chown root file
+chown :root file</code></pre>
+				</section>
+
+
+
+				<section data-transition="none">
+				<h2>Change Ownership</h2>
+				<p>The <em>chown</em> command will change the owner or group ownership of a file.</p>
+				<pre><code data-trim data-noescape class="shell"><mark>chown root:root file</mark> # Change user and group
+chown root: file
+chown root file
+chown :root file</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>Change Ownership</h2>
+				<p>The <em>chown</em> command will change the owner or group ownership of a file.</p>
+				<pre><code data-trim data-noescape class="shell">chown root:root file
+<mark>chown root: file</mark> # Change user and group
+chown root file
+chown :root file</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>Change Ownership</h2>
+				<p>The <em>chown</em> command will change the owner or group ownership of a file.</p>
+				<pre><code data-trim data-noescape class="shell">chown root:root file
+chown root: file
+<mark>chown root file</mark> # Change the user ownership
+chown :root file</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>Change Ownership</h2>
+				<p>The <em>chown</em> command will change the owner or group ownership of a file.</p>
+				<pre><code data-trim data-noescape class="shell">chown root:root file
+chown root: file
+chown root file
+<mark>chown :root file</mark> # Change the group ownership</code></pre>
+				</section>
+
+				<section>
+				<h2>Change Mode</h2>
+				<p>The <i>chmod</i> command changes the mode or the permission set of a file.</p>
+				<p>Mode can be represented in symbolic or octal notations</p>
+				<table>
+					<tr>
+						<td>Symbolic</td><td>rwx, rw, r-x</td>
+					</tr>
+					<tr>
+						<td>Octal</td><td>755, 644</td>
+					</tr>
+				</table>
+				</section>
+
+				<section data-transition="slide none">
+				<h2>chmod - Examples</h2>
+				<p>The following are some examples of how we can use <i>chmod</i></p>
+				<pre><code data-trim data-noescape class="shell">chmod 755 file
+chmod u+rwx
+chmod g-rwx
+chmod o=rw
+</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>chmod - Examples</h2>
+				<p>The following are some examples of how we can use <i>chmod</i></p>
+				<pre><code data-trim data-noescape class="shell"><mark>chmod 755 file</mark> # Change the permissions to 755
+chmod u+rwx
+chmod g-rwx
+chmod o=rw
+</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>chmod - Examples</h2>
+				<p>The following are some examples of how we can use <i>chmod</i></p>
+				<pre><code data-trim data-noescape class="shell">chmod 755 file
+<mark>chmod u+rwx</mark> # Change the user permissions to rwx
+chmod g-rwx
+chmod o=rw
+</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>chmod - Examples</h2>
+				<p>The following are some examples of how we can use <i>chmod</i></p>
+				<pre><code data-trim data-noescape class="shell">chmod 755 file
+chmod u+rwx
+<mark>chmod g-rwx</mark> # Remove rwx from the group permissions
+chmod o=rw
+</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>chmod - Examples</h2>
+				<p>The following are some examples of how we can use <i>chmod</i></p>
+				<pre><code data-trim data-noescape class="shell">chmod 755 file
+chmod u+rwx
+chmod g-rwx
+<mark>chmod o=rw</mark> # Set the other permissions to rw
+</code></pre>
+			</section>
+
+
+				<section>
+				<h2>SUID / SGID / Sticky Bit</h2>
+				<p>The set uid and set gid bits configure a command so that it is executed as said owner or group</p>
+				<p>The sticky bit designates that only the owner can delete the file</p>
+				<p>These permissions are set with the <i>chmod</i> command.</p>
+				</section>
+
+				<section data-transition="slide none">
+				<h2>Examples</h2>
+				<pre><code data-trim data-noescape class="shell">chmod o+s file
+chmod g+s file
+chmod +t file</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>Examples</h2>
+				<pre><code data-trim data-noescape class="shell"><mark>chmod u+s file</mark> # Set the SUID Bit
+chmod g+s file
+chmod +t file</code></pre>
+				</section>
+
+				<section data-transition="none">
+				<h2>Examples</h2>
+				<pre><code data-trim data-noescape class="shell">chmod o+s file
+<mark>chmod g+s file</mark> # Set the SGID Bit
+chmod +t file</code></pre>
+				</section>
+
+				<section data-transition="none	">
+				<h2>Examples</h2>
+				<pre><code data-trim data-noescape class="shell">chmod o+s file
+chmod g+s file
+<mark>chmod +t file</mark> # Set Sticky Bit</code></pre>
+				</section>
+
+				<section>
+				<h2>SUID / SGID / Sticky Bit</h2>
+				<p>When you set suid and sgid you will either see a uppercase S or lowercase s. The same goes for the sticky bit, only with the letter t</p>
+				<table>
+					<tr>
+						<td>Lowercase s or t</td><td>Underlying execute bit</td>
+					</tr>
+					<tr>
+						<td>Uppercase S or T</td><td>No underlying execute bit</td>
+					</tr>
+				</table>
+				</section>
+				<section>
+				<h2>chmod with -X</h2>
+				<p>Using chmod with a capital -X denotes to only set the execute bit if the execute bit is already set elsewhere in the permissions</p>
+				</section>
+
+				<section>
+				<h2>umask &amp; /etc/skel</h2>
+				<p>The umask is what determines what permissions is a new file created with. They are specifying which bits are turned off by default.</p>
+				<pre><code data-trim data-noescape class="shell">umask
+umask -S
+umask -p</code></pre>
+				</section>
+				<section>
+				<h2>umask &amp; /etc/skel</h2>
+				<p>The umask is set in /etc/profile but can also be set per user or in /etc/skel</p>
+				</section>
+				<section>
+				<h2>Some Permissions Tricks</h2>
+				<p>Just in case y'all haven't seen this before.</p>
+				<ul>
+					<li>rpm --verify package</li>
+					<li>rpm --setperms package</li>
+					<li>yum verify-all package</li>
+				</ul>
+				</section>
+				<section>
+				<h2>FACLs Introduction</h2>
+
+				</section>
+				<section>
+				<h2>FACLs C.R.U.D</h2>
+				<table>
+					<tr>
+						<td>Create</td><td>setfacl -m u:rack:rwx file</td>
+					</tr>
+					<tr>
+						<td>Read</td><td>getfacl file</td>
+					</tr>
+					<tr>
+						<td>Update</td><td>setfacl -x u:rack / setfacl -m u:rack:rw</td>
+					</tr>
+					<tr>
+						<td>Delete</td><td>setfacl -x -k -b file</td>
+					</tr>
+				</table>
+				</section>
+				<section>
+				<h2>Create FACL Defaults</h2>
+				<p>Defaults are set on a directory and they will carry through to each file under the directory.</p>
+				<p>Defaults are set by adding the -d, --default flag indicating the operations are for the default</p>
+				<pre><code data-trim data-noescape class="shell">setfacl -d -m u:rack:rwx ./testdir/</code></pre>
+				</section>
+				<section>
+				<h2>FACL Effective Permissions</h2>
+				<p>with FACLs the standard group permissions for a file represent the highest level of permissions.</p>
+				</section>
+				<section>
+				<h2>Slight Gotcha!</h2>
+				<p>FACLs are not persistent with backups! This is one of the main reasons using them is frowned upon. If they are used, they should be backed up.</p>
+				<pre><code># crontab -e
+# Save ACLs periodically
+*/20 * * * *    /usr/bin/getfacl -R --absolute-names \
+/var/www/vhosts > /home/user/faclbackup 2>/dev/null</code></pre>
+				<p>If they are backed up, we should be able to restore them.</p>
+				<pre style="box-shadow:none">/usr/bin/setfacl --restore /home/user/faclbackup</pre>
+				</section>
+				<section>
+				<h2>Review</h2>
+				<ul>
+					<li>FS Permissions</li>
+					<li>Commands: chmod, chown</li>
+					<li>umask and /etc/skel</li>
+					<li>FACLs C.R.U.D</li>
+				</ul>
+				</section>
+				<section>
+	           <h2>Contact Information</h2>
+	           <div id="hcard-Alex-Juarez" class="vcard">
+	            <a class="url fn" href="http://unsupported.io">Alex Juarez</a>
+	            <div class="org">Linux Principal Engineer at Rackspace</div>
+	            <a class="email" href="mailto:alex.juarez@rackspace.com">alex.juarez@rackspace.com</a>
+	           <div><span class="category">twitter: <a href="http://www.twitter.com/mralexjuarez" target="_blank">@mralexjuarez</a></span></div><p style="font-size:smaller;">This <a href="http://microformats.org/wiki/hcard" target="_blank">hCard</a> created with the <a href="http://microformats.org/code/hcard/creator" target="_blank">hCard creator</a>.</p>
+	           </div>
+	         </section>
+					<section>
+							<h2>Q &amp; A</h2>
+							<p>Or we can talk about whiskey</p>
+							<img src="http://0f7e4b6f48f01603dbf0-798ceaca68548b7d94e5a0f7efc280b5.r85.cf5.rackcdn.com/whiskey.jpg" class="plain"/>
+					</section>
+					<section>
+							<h2>Cat Tax!</h2>
+							<img src="imgs/ziggy.png" class="plain" style="float: left; max-width:45%"/>
+							<img src="imgs/moscow.png" class="plain" style="float: right; max-width:45%"/>
+					</section>
+				<section>
+				<h2>Thank You!</h2>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
